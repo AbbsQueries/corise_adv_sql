@@ -43,7 +43,7 @@ select
     /** NTS: Rank will give us multi-same place ranking : 1 2 2 3. Row number is in order of appearance **/
 from vk_data.events.website_activity
   	where recipe_id is not null 
-    group by 1,2
+    group by date_daily,recipe_id
  	qualify row_number = 1),
 /**The average number of searches completed before displaying a recipe
 Columns: dateTrunc( earliest view reciep),avg(search_completed)
@@ -66,7 +66,9 @@ from session_event_type_count
 daily_avg_search as (
 select
 	date_trunc("day",start_time_session) as date_daily
-    ,avg(session_search_count) as daily_avg_search_count
+    ,sum(session_search_count) as sum_search
+    ,nullif(sum(session_view_recipe_count),0)  as sum_view_recipe
+    ,sum_search/sum_view_recipe as daily_avg_search_count
 from session_search_sum
 	group by 1),
 daily_metrics as (
@@ -83,7 +85,8 @@ left join session_recipe
 	on daily_session_avg.date_daily =session_recipe.date_daily
 left join daily_avg_search
 	on daily_session_avg.date_daily =daily_avg_search.date_daily
-)
+) 
+-- this solution with the multiple left join gave a query time of 498ms
 select * from daily_metrics
 
 
